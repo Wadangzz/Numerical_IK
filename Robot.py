@@ -1,8 +1,9 @@
 import numpy as np
-from SE3lib import SE3
+from MyRobotMath import SE3
 
 class SCARA():
 
+    # SCARA 로봇의 Zero position, Body Twist, Space Twist
     def __init__(self, L1, L2, L3):
 
         se3 = SE3()
