@@ -2,7 +2,7 @@
 
 Newton Method 수치해석 활용한 Numerical Inverse Kinematics 구현 중
 
-DH Parameter X 
+DH Parameter X.  
 Lie Group 연산으로 접근중( 나중에 SLAM에도 도움 될듯 )
 
 1~2년 전에 python 아예 할 줄 몰라서 Excel로 했던 거
