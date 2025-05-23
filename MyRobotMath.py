@@ -1,11 +1,11 @@
 import numpy as np
+import math
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
 class SE3:
 
     def skew(self, v):
-
         """
         Create a skew-symmetric matrix from a 3D vector.
         :param v: 3D vector (list)
@@ -61,7 +61,7 @@ class SE3:
     
     def matsb(self,m,matexps):
         """
-        Compute the forword kinematics transformation matrix.
+        Compute the forword kinematics transformation matrix (body axis).
         :param m : Initial transformation matrix (4x4)
         :param matexps : List of body transformation matrices (4x4)
         :return: 4x4 transformation matrix
@@ -106,18 +106,16 @@ class SE3:
         return j_b
 
     
-    def pose_to_SE3(self, x, y, z, j1, j2, j3, degree = True):
+    def pose_to_SE3(self, desired, degree = True):
         """
         Compute the desired transformation matrix.
-        :param x: Desired position of x
-        :param y: Desired position of y
-        :param z: Desired position of z
-        :param j1: Desired axis of roll
-        :param j2: Desired axis of pitch
-        :param j3: Desired axis of yaw
+        :param derised: List of disired position (x, y, z, roll, pitch, yaw)
         :param degree: Unit of axis (True = Degree, False = Radian)
         :return: Desired transformation matrix (4x4 matrix)
         """
+        x, y, z = desired[0], desired[1], desired[2]
+        j1 ,j2 ,j3 = desired[3], desired[4], desired[5]
+
         if degree:
             roll, pitch, yaw = np.deg2rad([j1, j2, j3])
         else:
@@ -132,16 +130,29 @@ class SE3:
         return T
     
     def j_inv(self,j_b):
+        """
+        Compute pseudoinverse of the jacobian matrix.
+        :param j_b : Body Jacobian (6xN matrix)
+        :return : Pseudoinverse of the jacobian matrix.
+        """
+        # return np.linalg.inv(j_b.T @ j_b) @ j_b.T # Moore-Penrose 의사역행렬 (tall)
         return np.linalg.pinv(j_b) # 특이값 분해 기반 의사역행렬, square이면 그냥 역행렬
     
     def relativetwist(self, T_bd):
+        """
+        Compute the relative twist from the desired transformation matrix
+        using matrix logarithm.
+        :param T_bd : Desired transformation matrix (4x4)
+        :return: 6D vector
+        """
         T = np.zeros(6)
         R_bd = T_bd[:3,:3]
         p = T_bd[:3,3]
         trace = np.trace(R_bd)
-        theta_bd = np.acos((trace-1)/2) + np.random.normal(0,0.5)
+        cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
+        theta_bd = np.acos(cos_theta) + np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
         omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R_bd-R_bd.T))
-        omega_bd_hat_sq = np.dot(omega_bd_hat,omega_bd_hat)
+        omega_bd_hat_sq = omega_bd_hat**2
         omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
         v_bd = (np.eye(3)/theta_bd - 0.5*omega_bd_hat+(1/theta_bd-0.5/np.tan(0.5*theta_bd))*omega_bd_hat_sq) @ p
         T[:3] = omega_bd
@@ -149,5 +160,27 @@ class SE3:
         T = theta_bd*T
         return T
     
+    def CurrenntAxis(self, T_sb):
+        """
+        Compute the current Euler angle
+        :param T_sb : Current forword kinematics transformation matrix (body axis)
+        :return : List of Euler angle roll,pitch,yaw (Degree)
+        """
+        R_31 = T_sb[2,0]
+
+        if R_31**2 != 1:
+            roll = np.atan2(T_sb[2,1],T_sb[2,2])
+            pitch = np.atan2(-1*T_sb[2,0],np.sqrt(T_sb[0,0]**2+T_sb[1,0]**2))
+            yaw = np.atan2(T_sb[1,0],T_sb[0][0])
+        
+        else:
+            yaw = 0
+            pitch = -R_31 * np.pi/2 
+            roll = -R_31 * np.atan2(T_sb[0,1],T_sb[1,1])
+        
+        return np.rad2deg([roll, pitch, yaw]).tolist()
+
+
+
 
         
