@@ -1,7 +1,5 @@
 import numpy as np
-import math
 from scipy.spatial.transform import Rotation as R
-import matplotlib.pyplot as plt
 
 class SE3:
 
@@ -150,7 +148,9 @@ class SE3:
         p = T_bd[:3,3]
         trace = np.trace(R_bd)
         cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
-        theta_bd = np.acos(cos_theta) + np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
+        theta_bd = np.acos(cos_theta)
+        # if theta_bd < 1e-6:
+        theta_bd += np.random.normal(0,1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
         omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R_bd-R_bd.T))
         omega_bd_hat_sq = omega_bd_hat**2
         omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
@@ -179,8 +179,18 @@ class SE3:
             roll = -R_31 * np.atan2(T_sb[0,1],T_sb[1,1])
         
         return np.rad2deg([roll, pitch, yaw]).tolist()
+    
+def quintic_time_scaling(t, T):
+    quintic = np.array([[T**3  ,   T**4 ,   T**5],
+                        [3*T**2,  4*T**3, 5*T**4],
+                        [6*T   , 12*T**2,20*T**3]])
+    
+    s_T = np.array([1, 0, 0]) # 위치 1, 속도 0, 가속도 0 at t = T
 
+    cofficient = np.linalg.inv(quintic) @ s_T.reshape(3,1)
+    a3, a4 ,a5 = cofficient.flatten()
 
-
-
-        
+    s = a3*(t)**3 + a4*(t)**4 + a5*(t)**5 # a0, a1, a2는 어차피 0이라 미반영
+    s_dot = (3*a3*(t)**2 + 4*a4*(t)**3 + 5*a5*(t)**4)
+    s_ddot = (6*a3*(t) + 12*a4*(t)**2 + 20*a5*(t)**3)
+    return s, s_dot, s_ddot
