@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import Robot
 from MyRobotMath import SE3, quintic_time_scaling
 
-wam = Robot.BarretWAM(55,30,6,4.5)
+wam = Robot.BarretWAM(55,30,6,4.5) # 링크 길이
 se3 = SE3()
 
 M = wam.zero

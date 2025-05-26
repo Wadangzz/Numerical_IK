@@ -1,13 +1,64 @@
-# Numerical_IK
+# 🤖 Lie Group 기반 수치해석 역기구학 (Numerical IK)
 
-Newton Method 수치해석 활용한 Numerical Inverse Kinematics
+Lie group 연산을 활용한 Newton 방식의 수치해석 역기구학 Python 구현 프로젝트입니다.
 
-Lie Group 연산으로 접근중( 나중에 SLAM에도 도움 될듯 )
+1~2년 전 프로그래밍에 무지할 때 Excel을 활용해서 구현한 개인 학습이었지만
+Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 범용 적용 가능하도록 확장하고 있습니다.
 
-1~2년 전에 python 아예 할 줄 몰라서 Excel로 했던 거
-Python으로 재구성 해보고 있습니다.
+---
 
-Robot.py 모듈에 로봇 클래스 생성해서
-다른 로봇에도 적용할 수 있도록 구현 중
+## ✨ 주요 기능
 
-5차 다항식 경로 생성 + Feedback 제어 알고리즘 만들기 목표
+* ✅ Newton-Raphson 방식의 수치해석 역기구학 (Numerical IK)
+* ✅ SE(3), twist 기반의 Lie algebra Matrix exponential, logarithm 연산
+* ✅ SCARA, Barret WAM 등 다양한 로봇 구조 모듈화, 추후 추가 가능
+* ✅ 5차 다항식 기반 time scaling trajectory 생성
+* ✅ 관절 각도, 속도, 가속도 시각화
+* 🚧 피드백 제어 루프, 실시간 제어 연동 예정
+
+---
+
+## 📦 구성 모듈
+
+* `MyRobotMath.py` – SE(3) 연산, Jacobian, twist, Matrix exponential, logarithm 등
+* `Robot.py` – SCARA, BarretWAM 등 Robot 클래스 정의
+* `SCARA.py` – SCARA IK 계산, trajectory 생성 및 시각화 루프
+* `WAM.py` – barretWAM IK 계산, trajectory 생성 및 시각화 루프
+
+---
+
+## 🧠 Why Lie Group?
+
+✅ 좌표계에 구애받지 않는 수식 표현
+
+✅ 로봇 모션 및 제어 전반에 걸쳐 활용 가능한 유연한 구조
+
+✅ 추후 SLAM이나 최적화 문제로의 확장에 바로 적용 가능
+
+---
+
+## 🚀 로드맵
+
+- [x] Support SCARA and 7DOF BarretWAM
+- [x] 5th-order trajectory generation
+- [ ] Feedback linearization or impedance controller
+- [ ] 3D animation with Matplotlib or Unity integration
+- [ ] Export to CSV / ROS message
+
+---
+
+## 🛠️ 실행 환경
+
+* Python 3.9
+* `numpy`, `scipy`, `matplotlib`
+
+```bash
+pip install numpy scipy matplotlib
+
+---
+
+## 🔗 License
+
+MIT License. Free to use, modify, and learn from.
+
+---

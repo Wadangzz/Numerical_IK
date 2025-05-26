@@ -1,16 +1,16 @@
 import numpy as np
 import Robot
 import matplotlib.pyplot as plt
-from MyRobotMath import SE3
+from MyRobotMath import SE3, quintic_time_scaling
 
-scara = Robot.SCARA(1,1.5,1.5)
+scara = Robot.SCARA(1,1.5,1.5) # 링크 길이
 se3 = SE3()
 
 
 M = scara.zero
 B = scara.B_tw
 S = scara.S_tw
-N = len(scara.joint)
+L = len(scara.joint)
 
 desired = [0.6,0.4,0,0,0,-77] # 목표 자세의 (x,y,z,roll,pitch,yaw) / SCARA는 roll, pitch 없음
 T_d = se3.pose_to_SE3(desired) # 목표 자세의 Tranformation Matrix
@@ -26,7 +26,7 @@ while True:
 
     count += 1 # 연산 횟수 증가
 
-    for i in range(N):
+    for i in range(L):
         matexps_b.append(se3.matexp(scara.joint[i],init[i],B[i])) # Body Axis 기준 각 축의 Matrix Exponential
         matexps_s.append(se3.matexp(scara.joint[i],init[i],S[i])) # Space Axis 기준 각 축의 Matrix Exponential
 
@@ -48,15 +48,78 @@ while True:
 
     theta = Robot.deg2rad(init,scara.joint)
 
-    thetak = theta.reshape(N,1) + J_pseudo @ V_bd.reshape(6,1) # Newton Raphson Method
+    thetak = theta.reshape(L,1) + J_pseudo @ V_bd.reshape(6,1) # Newton Raphson Method
     thetak = Robot.rad2deg(thetak,scara.joint)
 
-    # 각도 정규화 (-180~180)
+    # 각도 정규화 후 갱신 (-180~180)
     init = Robot.theta_normalize(thetak,scara.joint)
 
     if np.all(np.abs(pos_err) < threshold): # 오차가 임계값 이내면 break
         print(estimated)
         print(f"연산 횟수 : {count}, Joint Value : {init}")
         break
+
+theta_start = np.array([135,45,0,0.2])
+theta_end = np.array(init)  
+
+T = 4.0
+N = 200
+time = np.linspace(0, T, N)
+
+trajectory = []
+velocity = []
+acceleration = []
+
+for i in range(N):
+    t = i / N * T
+    s, s_dot, s_ddot = quintic_time_scaling(t, T)
+    theta_desired = theta_start + s*(theta_end-theta_start)
+    theta_dot = s_dot*(theta_end-theta_start)
+    theta_ddot = s_ddot*(theta_end-theta_start)
+    trajectory.append(theta_desired)
+    velocity.append(theta_dot)
+    acceleration.append(theta_ddot)
+
+trajectory = np.array(trajectory).T  # shape = (4, N)
+velocity = np.array(velocity).T
+acceleration = np.array(acceleration).T
+
+fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+fig.suptitle("SCARA Joint Trajectory", fontsize=16)
+
+joint_names = ["θ1", "θ2", "θ3", "L"]
+
+# Position (Trajectory)
+for i in range(L):
+    axs[0].plot(time, trajectory[i], label=joint_names[i])
+
+axs[0].set_xlabel("Time (s)")
+axs[0].set_ylabel("Joint Angle (deg) / L (m)")
+axs[0].set_title("Joint Position Profile")
+axs[0].legend()
+axs[0].grid(True)
+
+# Velocity
+for i in range(L):
+    axs[1].plot(time, velocity[i], label=joint_names[i])
+
+axs[1].set_xlabel("Time (s)")
+axs[1].set_ylabel("Joint Velocity (deg/s) / L (m/s)") 
+axs[1].set_title("Joint Velocity Profile")
+axs[1].legend()
+axs[1].grid(True)
+
+# Acceleration
+for i in range(L):
+    axs[2].plot(time, acceleration[i], label=joint_names[i])
+axs[2].set_xlabel("Time (s)")
+
+axs[2].set_ylabel("Joint Acceleration (deg/s²) / L (m/s²)")
+axs[2].set_title("Joint Acceleration Profile")
+axs[2].legend()
+axs[2].grid(True)
+
+plt.tight_layout()
+plt.show()
 
 # time.sleep(0.001)

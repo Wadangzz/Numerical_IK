@@ -18,7 +18,8 @@ def deg2rad(value,joint):
     """
     If revolute joint, convert degree to radian. 
     :param value: List of joint angle (degree)
-    :return : List of joint angle (radian)
+    :param joint: List of joint
+    :return: Numpy.array of joint angle (radian)
     """
     theta = np.array(value)
     for i in range(len(joint)):
@@ -29,9 +30,10 @@ def deg2rad(value,joint):
 
 def rad2deg(value,joint):
     """
-    If revolute joint, convert degree to radian. 
-    :param value: List of joint angle (degree)
-    :return : List of joint angle (radian)
+    If revolute joint, convert redian to degree. 
+    :param value: List of joint angle (radian)
+    :param joint: List of joint
+    :return: Numpy.array of joint angle (degree)
     """
     theta = np.array(value)
     for i in range(len(joint)):
@@ -40,22 +42,22 @@ def rad2deg(value,joint):
 
     return theta
 
-def theta_normalize(theta,joint):
+def theta_normalize(value,joint):
     """
     If revolute joint, normalize degree -180 to 180. 
-    :param value: List of joint angle (degree)
-    :return : List of normalized joint angle 
+    :param value: Numpy.Array of joint angle (degree)
+    :param joint: List of joint
+    :return: List of normalized joint angle 
     """
-    init = theta.flatten().tolist()
-    for i in range(len(init)):
+    theta = value.flatten().tolist()
+    for i in range(len(value)):
         if joint[i] == 'R':
-            if init[i] % 360 > 180:
-                init[i] = init[i] % 360 - 360
+            if value[i] % 360 > 180:
+                theta[i] = theta[i] % 360 - 360
             else:
-                init[i] = init[i] % 360
+                theta[i] = theta[i] % 360
     
-    return init
-
+    return theta
 
 class SCARA():
 
