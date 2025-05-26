@@ -1,8 +1,9 @@
 # 🤖 Lie Group 기반 수치해석 역기구학 (Numerical IK)
+![example](https://github.com/user-attachments/assets/d2d08645-af94-43c4-bb6e-9d5f2e90bb73)
 
 Lie group 연산을 활용한 Newton 방식의 수치해석 역기구학 Python 구현 프로젝트입니다.
 
-1~2년 전 프로그래밍에 무지할 때 Excel을 활용해서 구현한 개인 학습이었지만   
+1~2년 전 프로그래밍에 무지할 때 개인 학습 목적으로 Excel을 활용하여 구현했었지만   
 Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 범용 적용 가능하도록 확장하고 있습니다.
 
 ---
