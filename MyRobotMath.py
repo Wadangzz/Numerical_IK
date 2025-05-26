@@ -138,10 +138,10 @@ class SE3:
     
     def relativetwist(self, T_bd):
         """
-        Compute the relative twist from the desired transformation matrix
-        using matrix logarithm.
+        Compute the relative twist 
+        from the desired transformation matrix using matrix logarithm.
         :param T_bd : Desired transformation matrix (4x4)
-        :return: 6D vector
+        :return: 6D vector, radian
         """
         T = np.zeros(6)
         R_bd = T_bd[:3,:3]
@@ -149,8 +149,8 @@ class SE3:
         trace = np.trace(R_bd)
         cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
         theta_bd = np.acos(cos_theta)
-        # if theta_bd < 1e-6:
-        theta_bd += np.random.normal(0,1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
+        if theta_bd < 1e-8:
+            theta_bd += np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
         omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R_bd-R_bd.T))
         omega_bd_hat_sq = omega_bd_hat**2
         omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
@@ -160,25 +160,29 @@ class SE3:
         T = theta_bd*T
         return T
     
-    def CurrenntAxis(self, T_sb):
+    def CurrenntAngles(self, T_sb):
         """
         Compute the current Euler angle
         :param T_sb : Current forword kinematics transformation matrix (body axis)
         :return : List of Euler angle roll,pitch,yaw (Degree)
         """
-        R_31 = T_sb[2,0]
+        R_mat = T_sb[:3, :3]
+        euler = R.from_matrix(R_mat).as_euler('zyx', degrees=True)  # yaw, pitch, roll
+        return euler[::-1].tolist()  # roll, pitch, yaw 순으로 리턴
+    
+        # R_31 = T_sb[2,0]
 
-        if R_31**2 != 1:
-            roll = np.atan2(T_sb[2,1],T_sb[2,2])
-            pitch = np.atan2(-1*T_sb[2,0],np.sqrt(T_sb[0,0]**2+T_sb[1,0]**2))
-            yaw = np.atan2(T_sb[1,0],T_sb[0][0])
+        # if R_31**2 != 1:
+        #     roll = np.atan2(T_sb[2,1],T_sb[2,2])
+        #     pitch = np.atan2(-1*T_sb[2,0],np.sqrt(T_sb[0,0]**2+T_sb[1,0]**2))
+        #     yaw = np.atan2(T_sb[1,0],T_sb[0][0])
         
-        else:
-            yaw = 0
-            pitch = -R_31 * np.pi/2 
-            roll = -R_31 * np.atan2(T_sb[0,1],T_sb[1,1])
+        # else:
+        #     yaw = 0
+        #     pitch = -R_31 * np.pi/2 
+        #     roll = -R_31 * np.atan2(T_sb[0,1],T_sb[1,1])
         
-        return np.rad2deg([roll, pitch, yaw]).tolist()
+        # return np.rad2deg([roll, pitch, yaw]).tolist() // 이거는 너무 정확도가 떨어짐......
     
 def quintic_time_scaling(t, T):
     quintic = np.array([[T**3  ,   T**4 ,   T**5],

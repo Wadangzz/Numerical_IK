@@ -3,6 +3,60 @@ from MyRobotMath import SE3
 
 se3 = SE3()
 
+def select_init(desired, preset): # 목표 좌표에 해당하는 사분면 초기 상태 호출
+    x, y = desired[0], desired[1]
+    key = (x > 0, y > 0)
+    mapping = {
+        (True,   True): 0,
+        (False,  True): 1,
+        (False, False): 2,
+        (True,  False): 3,
+    }
+    return preset[mapping[key]]
+
+def deg2rad(value,joint): 
+    """
+    If revolute joint, convert degree to radian. 
+    :param value: List of joint angle (degree)
+    :return : List of joint angle (radian)
+    """
+    theta = np.array(value)
+    for i in range(len(joint)):
+        if joint[i] == 'R':
+            theta[i] = np.deg2rad(theta[i])
+    
+    return theta
+
+def rad2deg(value,joint):
+    """
+    If revolute joint, convert degree to radian. 
+    :param value: List of joint angle (degree)
+    :return : List of joint angle (radian)
+    """
+    theta = np.array(value)
+    for i in range(len(joint)):
+        if joint[i] == 'R':
+           theta[i] = np.rad2deg(value[i])
+
+    return theta
+
+def theta_normalize(theta,joint):
+    """
+    If revolute joint, normalize degree -180 to 180. 
+    :param value: List of joint angle (degree)
+    :return : List of normalized joint angle 
+    """
+    init = theta.flatten().tolist()
+    for i in range(len(init)):
+        if joint[i] == 'R':
+            if init[i] % 360 > 180:
+                init[i] = init[i] % 360 - 360
+            else:
+                init[i] = init[i] % 360
+    
+    return init
+
+
 class SCARA():
 
     # SCARA 로봇의 Zero position, Body Twist, Space Twist, 초기값 추정 set
@@ -34,10 +88,10 @@ class BarretWAM():
 
         self.joint = ['R','R','R','R','R','R','R']
 
-        self.preset = [[37, 1, 2, 3,4,5,6],  # 1사분면
-                       [135, 1, 2, 3,4,5,6],  # 2사분면
-                       [-135,1, 2, 3,4,5,6], # 3사분면
-                       [-65, 1, 2, 3,4,5,6] # 4사분면
+        self.preset = [[37, 45, 0, 3,0,0,0],  # 1사분면
+                       [135, 1, 0, 3,0,0,0],  # 2사분면
+                       [-135,1, 0, 3,0,0,0], # 3사분면
+                       [-65, 1, 0, 3,0,0,0] # 4사분면
                                             ]
 
         self.zero = np.array([[1, 0, 0, 0],
@@ -53,4 +107,4 @@ class BarretWAM():
                      [0, 1, 0, L3, 0, 0],
                      [0, 0, 1, 0, 0, 0]]
 
-        self.S_tw = (se3.adjoint(self.zero) @ np.array(self.B_tw).T).T.tolist()     
+        self.S_tw = (se3.adjoint(self.zero) @ np.array(self.B_tw).T).T.tolist()
