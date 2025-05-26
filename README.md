@@ -3,7 +3,7 @@
 
 Lie group 연산을 활용한 Newton-Raphson Invese Kinematics Python 프로젝트입니다.
 
-1~2년 전 프로그래밍에 무지할 때 Excel을 활용해서 구현한 개인 학습이었지만   
+1~2년 전 프로그래밍에 무지할 때 Excel을 활용해서 구현하여 교내 경진대회에서 우수상을 수상했습니다.
 Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 범용 적용 가능하도록 확장하고 있습니다.
 
 ---
@@ -12,7 +12,7 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 * ✅ Newton-Raphson 방식의 수치해석 역기구학 (Numerical IK)
 
-* ✅ SE(3). se(3) 기반 Matrix exponential, logarithm 연산
+* ✅ SE(3), se(3) 기반 Matrix exponential, logarithm 연산
 
 * ✅ SCARA, Barret WAM 등 다양한 로봇 구조 모듈화, 추후 추가 가능
 
@@ -26,9 +26,9 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 ## 📦 구성 모듈
 
-* `MyRobotMath.py` – Lie Group, Lie algebra 연산(Jacobian, twist, Matrix exponential, logarithm 등)
+* `MyRobotMath.py` – Lie Group, Lie algebra 연산(Skew-symmetric, Jacobian, twist, Matrix exponential, logarithm 등)
 
-* `Robot.py` – SCARA, BarretWAM 등 Robot 클래스 정의
+* `Robot.py` – SCARA, BarretWAM 등 Robot 클래스 정의, 각도 단위 변환 및 정규화 메서드 + 초기값 호출 메서드 포함
 
 * `SCARA.py` – SCARA IK 계산, trajectory 생성 및 시각화
 
