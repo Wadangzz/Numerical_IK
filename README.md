@@ -30,14 +30,14 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 * `Robot.py` – SCARA, BarretWAM 등 Robot 클래스 정의, 각도 단위 변환 및 정규화 메서드 + 초기값 호출 메서드 포함
 
-* `SCARA.py` – SCARA IK 계산, trajectory 생성 및 시각화
+* `SCARA.py` – SCARA IK 계산, joint space trajectory 생성 및 시각화
 
-* `WAM.py` – barretWAM IK 계산, trajectory 생성 및 시각화
+* `WAM.py` – barretWAM IK 계산, joint space trajectory 생성 및 시각화
 
 
 ---
 
-## 🧠 Why Lie Group?
+## 🧠 Lie Group
 
 * ✅ 좌표계에 구애받지 않는 수식 표현
 
