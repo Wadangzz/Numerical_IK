@@ -35,10 +35,11 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 * `Robot.py` – SCARA, BarretWAM 등 Robot 클래스 정의, 각도 단위 변환 및 정규화 메서드 + 초기값 호출 메서드 포함
 
-* `SCARA.py` – SCARA IK 계산, joint space trajectory 생성 및 시각화
+* `SCARA.py` – SCARA IK 계산, joint space trajectory 생성
 
-* `WAM.py` – barretWAM IK 계산, joint space trajectory 생성 및 시각화
+* `WAM.py` – barretWAM IK 계산, joint space trajectory 생성
 
+* `visualization.py` - Robot Link, Joint, End-Effector 시각화
 
 ---
 
@@ -56,8 +57,8 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 - [x] Support SCARA and 7DOF BarretWAM
 - [x] 5th-order trajectory generation
+- [X] 3D animation with Matplotlib or Unity integration
 - [ ] Feedback linearization or impedance controller
-- [ ] 3D animation with Matplotlib or Unity integration
 - [ ] Export to CSV / ROS message
 
 ---
