@@ -1,6 +1,11 @@
 # 🤖 Lie Group 기반 수치해석 역기구학 (Numerical IK)
 ![example](https://github.com/user-attachments/assets/889392eb-6135-4069-9b4d-3f3a21fa743e)
 
+<p align="center">
+  <img src="scara_animation.gif" width="45%">
+  <img src="scara_animation2.gif" width="45%">
+</p>
+
 Lie group 연산을 활용한 Newton-Raphson Invese Kinematics Python 프로젝트입니다.
 
 1~2년 전 프로그래밍에 무지할 때 Excel을 활용해서 구현하여 교내 경진대회에서 우수상을 수상했습니다.   
