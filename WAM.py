@@ -29,7 +29,7 @@ while True:
         matexps_b.append(se3.matexp(wam.joint[i],init[i],B[i])) # Body Axis 기준 각 축의 Matrix Exponential
         matexps_s.append(se3.matexp(wam.joint[i],init[i],S[i])) # Space Axis 기준 각 축의 Matrix Exponential
 
-    T_sb = se3.matsb(M,matexps_b) # Forward Kinematics 적용 변환행렬
+    T_sb = se3.matFK(M,matexps_b) # Forward Kinematics 적용 변환행렬
     estimated = []
     for i in range(3):
         estimated.append(T_sb[i,3].item()) # 현재 x, y, z

@@ -57,7 +57,7 @@ class SE3:
         
         return T
     
-    def matsb(self,m,matexps):
+    def matFK(self,m,matexps):
         """
         Compute the forword kinematics transformation matrix (body axis).
         :param m : Initial transformation matrix (4x4)
@@ -95,7 +95,7 @@ class SE3:
         :param v: List of space twists (6D vectors)
         :return: Body Jacobian (6xN matrix)
         """
-        T_sb = self.matsb(m,matexps_b)
+        T_sb = self.matFK(m,matexps_b)
         T_bs = np.linalg.inv(T_sb) # Inverse of the transformation matrix
         adj_bs = self.adjoint(T_bs)
 
