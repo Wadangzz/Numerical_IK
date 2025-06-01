@@ -28,7 +28,7 @@ class SE3:
         adj[3:6, :3] = self.skew(p) @ R
         
         return adj
-    
+     
     def matexp(self, joint, degree, twist): # Matrix exponential
         """
         Compute the matrix exponential of a se(3) element.
@@ -149,8 +149,8 @@ class SE3:
         trace = np.trace(R_bd)
         cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
         theta_bd = np.acos(cos_theta)
-        if theta_bd < 1e-8:
-            theta_bd += np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
+        # if theta_bd < 1e-8:
+        theta_bd += np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
         omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R_bd-R_bd.T))
         omega_bd_hat_sq = omega_bd_hat**2
         omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
@@ -183,7 +183,53 @@ class SE3:
         #     roll = -R_31 * np.atan2(T_sb[0,1],T_sb[1,1])
         
         # return np.rad2deg([roll, pitch, yaw]).tolist() // 이거는 너무 정확도가 떨어짐......
+
+def deg2rad(value,joint): 
+    """
+    If revolute joint, convert degree to radian. 
+    :param value: List of joint angle (degree)
+    :param joint: List of joint
+    :return: Numpy.array of joint angle (radian)
+    """
+    theta = np.array(value)
+    for i in range(len(joint)):
+        if joint[i].type == 'R':
+            theta[i] = np.deg2rad(theta[i])
     
+    return theta
+
+def rad2deg(value,joint):
+    """
+    If revolute joint, convert redian to degree. 
+    :param value: List of joint angle (radian)
+    :param joint: List of joint
+    :return: Numpy.array of joint angle (degree)
+    """
+    theta = np.array(value)
+    for i in range(len(joint)):
+        if joint[i].type == 'R':
+           theta[i] = np.rad2deg(value[i])
+
+    return theta
+
+def theta_normalize(value,joint):
+    """
+    If revolute joint, normalize degree -180 to 180. 
+    :param value: Numpy.Array of joint angle (degree)
+    :param joint: List of joint
+    :return: List of normalized joint angle 
+    """
+    theta = value.flatten().tolist()
+    for i in range(len(value)):
+        if joint[i].type == 'R':
+            if value[i] % 360 > 180:
+                theta[i] = theta[i] % 360 - 360
+            else:
+                theta[i] = theta[i] % 360
+    
+    return theta
+
+
 def quintic_time_scaling(t, T):
     quintic = np.array([[T**3  ,   T**4 ,   T**5],
                         [3*T**2,  4*T**3, 5*T**4],
@@ -198,3 +244,92 @@ def quintic_time_scaling(t, T):
     s_dot = (3*a3*(t)**2 + 4*a4*(t)**3 + 5*a5*(t)**4)
     s_ddot = (6*a3*(t) + 12*a4*(t)**2 + 20*a5*(t)**3)
     return s, s_dot, s_ddot
+
+def IK(robot,init,desired):
+
+    se3 = SE3()
+    M = robot.zero
+    B = robot.B_tw
+    S = robot.S_tw
+    L = len(robot.joints)
+
+    T_d = se3.pose_to_SE3(desired)
+    threshold = 1e-6 # 오차 범위
+    count = 0
+        
+    while True:
+
+        matexps_b = []
+        matexps_s = []
+
+        count += 1 # 연산 횟수 증가
+
+        for i in range(L):
+            matexps_b.append(se3.matexp(robot.joints[i].type,init[i],B[i])) # Body Axis 기준 각 축의 Matrix Exponential
+            matexps_s.append(se3.matexp(robot.joints[i].type,init[i],S[i])) # Space Axis 기준 각 축의 Matrix Exponential
+
+        T_sb = se3.matFK(M,matexps_b) # Forward Kinematics 적용 변환행렬
+        estimated = []
+        for i in range(3):
+            estimated.append(T_sb[i,3].item()) # 현재 x, y, z
+        
+        eulerAngles = se3.CurrenntAngles(T_sb)
+        for eulerAngle in eulerAngles:
+            estimated.append(eulerAngle) # Euler 각도 추정값
+
+        pos_err = np.array(desired[:3]) - np.array(estimated[:3]) # x, y, z 오차
+
+        T_bd = np.dot(np.linalg.inv(T_sb),T_d) # Relative Trasformation Matrix
+        J_b = se3.body_jacobian(M,matexps_b,matexps_s,S) # Body Jacobian
+        J_pseudo = se3.j_inv(J_b) # Jacobian의 역행렬 (또는 의사역행렬)
+        V_bd = se3.relativetwist(T_bd) # Ralative Twist, 각도 오차
+
+        theta = deg2rad(init,robot.joints)
+
+        thetak = theta.reshape(L,1) + J_pseudo @ V_bd.reshape(6,1) # Newton Raphson Method
+        thetak = rad2deg(thetak,robot.joints)
+
+        # 각도 정규화 후 갱신 (-180~180)
+        init = theta_normalize(thetak,robot.joints)
+        print(init)
+
+        if np.all(np.abs(pos_err) < threshold): # 오차가 임계값 이내면 break
+            print(estimated)
+            print(f"연산 횟수 : {count}, Joint Value : {init}")
+            break
+        if count >= 1000:
+            break
+
+    return init
+
+def create_trajectory(start, end, times=1.0, samples=50):
+
+    theta_start = np.array(start)
+    theta_end = np.array(end)
+    d_theta = theta_end - theta_start
+
+    for i in range(len(start)):
+        if np.abs(d_theta[i]) > 180:
+            d_theta[i] = -np.sign(d_theta[i])*(360-np.abs(d_theta[i]))
+    # for i in range(len(start)):
+    #     if np.abs(d_theta[i]+theta_start[i]) > 180:
+    #         d_theta[i] = -np.sign(d_theta[i])*(360-np.abs(d_theta[i]))
+        
+    T = times
+    N = samples
+
+    trajectory = []
+    velocity = []
+    acceleration = []
+
+    for i in range(N):
+        t = i / N * T
+        s, s_dot, s_ddot = quintic_time_scaling(t, T)
+        theta_desired = theta_start + s*(d_theta)
+        theta_dot = s_dot*(d_theta)
+        theta_ddot = s_ddot*(d_theta)
+        trajectory.append(theta_desired)
+        velocity.append(theta_dot)
+        acceleration.append(theta_ddot)
+    
+    return d_theta, trajectory, velocity, acceleration

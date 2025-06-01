@@ -2,8 +2,9 @@
 ![example](https://github.com/user-attachments/assets/889392eb-6135-4069-9b4d-3f3a21fa743e)
 
 <p align="center">
-  <img src="scara_animation.gif" width="45%">
-  <img src="scara_animation2.gif" width="45%">
+  <img src="scara_animation.gif" width="35%">
+  <img src="scara_animation2.gif" width="35%">
+  <img src="UR5.gif" width="20%">
 </p>
 
 Lie group 연산을 활용한 Newton-Raphson Invese Kinematics Python 프로젝트입니다.
