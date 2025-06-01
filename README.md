@@ -2,9 +2,9 @@
 ![example](https://github.com/user-attachments/assets/889392eb-6135-4069-9b4d-3f3a21fa743e)
 
 <p align="center">
-  <img src="scara_animation.gif" width="35%">
-  <img src="scara_animation2.gif" width="35%">
-  <img src="UR5.gif" width="20%">
+  <img src="scara_animation.gif" width="30%">
+  <img src="scara_animation2.gif" width="30%">
+  <img src="UR5.gif" width="30%">
 </p>
 
 Lie group 연산을 활용한 Newton-Raphson Invese Kinematics Python 프로젝트입니다.
@@ -40,17 +40,9 @@ Python을 익히면서 구조화된 모듈로 재구성하고 여러 로봇에 �
 
 * `WAM.py` – barretWAM IK 계산, joint space trajectory 생성
 
-* `visualization.py` - Robot Link, Joint, End-Effector 시각화
+* `UR5.py` – UR5 IK 계산, joint space trajectory 생성, Unity 시각화
 
----
-
-## 🧠 Lie Group
-
-* ✅ 좌표계에 구애받지 않는 수식 표현
-
-* ✅ 로봇 모션 및 제어 전반에 걸쳐 활용 가능한 유연한 구조
-
-* ✅ 추후 SLAM이나 최적화 문제로의 확장에 바로 적용 가능
+* ~~`visualization.py` - Robot Link, Joint, End-Effector 시각화~~ 왠만하면 사용하지 않는 게 좋을 듯
 
 ---
 
