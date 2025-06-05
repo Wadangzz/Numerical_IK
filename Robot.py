@@ -179,11 +179,6 @@ class BarretWAM:
     def update_angles(self, angles):
         current_point = np.array([0, 0, 0])
         
-        # self.links[0].update_position(current_point, angle=np.deg2rad([angles[0],0,0]))
-        # current_point = self.links[0].end_point
-  
-        # self.links[1].update_position(current_point, angle=np.deg2rad([angles[0],angles[1],0]))
-        # current_point = self.links[1].end_point
         self.links[12].update_position(current_point, angle=np.deg2rad([angles[0],0,0]))
         self.links[13].update_position(current_point, angle=np.deg2rad([angles[2],0,0]))
 
@@ -207,22 +202,11 @@ class BarretWAM:
         current_point = self.links[5].end_point
 
 
-        # self.links[6].update_position(current_point, angle=np.deg2rad([angles[0]+angles[2]+angles[4],
-        #                                                                angles[1]+angles[3],
-        #                                                                0]))
-        # current_point = self.links[6].end_point
-
-        # self.links[7].update_position(current_point, angle=np.deg2rad([angles[0]+angles[2]+angles[4],
-        #                                                                angles[1]+angles[3]+angles[5],
-        #                                                                0]))
-        # current_point = self.links[6].end_point
-
         self.links[7].update_position(current_point, angle=np.deg2rad([angles[0]+angles[2]+angles[4]+angles[6],
                                                                        angles[1]+angles[3]+angles[5], 
                                                                        0])) # L3 링크 회전
         current_point = self.links[7].end_point
         
-
         # End-Effector 표시
 
         self.links[9].update_position(current_point, angle=np.deg2rad([angles[0]+angles[2]+angles[4]+angles[6],
@@ -246,6 +230,7 @@ class UR5:
             JointSpec('R', 'z', 'z'),
             JointSpec('R', 'x', 'z'),
         ]
+        self.links = [L1,L2,L3,L4,L5,L6,L7,L8]
 
         self.zero = np.array([[1, 0, 0, L2-L4+L6+L8],
                               [0, 1, 0, 0],

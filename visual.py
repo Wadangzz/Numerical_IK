@@ -67,7 +67,7 @@ def plot_trajectory(theta_start, d_theta, length, times=1.0, samples=400):
     plt.tight_layout()
     plt.show()
 
-def animate_robot(robot,trajectory,lim = 180,times=1.0,samples=50):
+def animate_robot(robot,trajectory,lim = 180,times=1.0,samples=500):
 
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111, projection='3d')
@@ -91,7 +91,7 @@ def animate_robot(robot,trajectory,lim = 180,times=1.0,samples=50):
             lines[i].set_3d_properties([link.start_point[2], link.end_point[2]])
             joints[i]._offsets3d = ([link.start_point[0]], [link.start_point[1]], [link.start_point[2]])
 
-        end_effector = robot.links[7].end_point
+        end_effector = robot.links[4].end_point
         ee._offsets3d = ([end_effector[0]], [end_effector[1]], [end_effector[2]])
         ee_text.set_position((end_effector[0], end_effector[1]))
         ee_text.set_3d_properties(end_effector[2])
@@ -110,7 +110,7 @@ def animate_robot(robot,trajectory,lim = 180,times=1.0,samples=50):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        # robot.ax.set_title(f"Time: {frame/N*T:.2f} s")
+        ax.set_title(f"Time: {frame/samples*times:.2f} s")
 
     # 애니메이션 생성 및 실행
     ani = FuncAnimation(fig, update, frames=samples, interval = times*1000/samples, repeat=False)

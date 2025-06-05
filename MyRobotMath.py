@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation as R, Slerp
 
 class SE3:
 
@@ -29,20 +29,26 @@ class SE3:
         
         return adj
      
-    def matexp(self, joint, degree, twist): # Matrix exponential
+    def matexp(self, degree, screw, joint='R',unit='degree'): # Matrix exponential
         """
         Compute the matrix exponential of a se(3) element.
-        :param theta : Angle of rotation
-        :param bodytwist 6D vector representing the se(3) element
+        :param degree : Angle of rotation
+        :param screw axis 6D vector representing the se(3) element
         :return: 4x4 transformation matrix
         """
-        if joint == 'R': # Revolute Joint 일 때
-            theta = np.deg2rad(degree)
-        elif joint == 'P': # Prismatic Joint 일 때
-            theta = degree
+        if unit == 'degree':
+            if joint == 'R': # Revolute Joint 일 때
+                theta = np.deg2rad(degree)
+            elif joint == 'P': # Prismatic Joint 일 때
+                theta = degree
+        elif unit == 'radian':
+            if joint == 'R': # Revolute Joint 일 때
+                theta = degree
+            elif joint == 'P': # Prismatic Joint 일 때
+                theta = np.rad2deg(degree)
 
-        omega = twist[:3]
-        v = twist[3:6]
+        omega = screw[:3]
+        v = screw[3:6]
         
         omega_hat = self.skew(omega)
         omega_hat_sq = np.dot(omega_hat, omega_hat)
@@ -136,29 +142,67 @@ class SE3:
         # return np.linalg.inv(j_b.T @ j_b) @ j_b.T # Moore-Penrose 의사역행렬 (tall)
         return np.linalg.pinv(j_b) # 특이값 분해 기반 의사역행렬, square이면 그냥 역행렬
     
-    def relativetwist(self, T_bd):
+    # def matlogm(self, T):
+    #     """
+    #     Compute the relative twist 
+    #     from the desired transformation matrix using matrix logarithm.
+    #     :param T: Desired transformation matrix (4x4)
+    #     :return: 6D vector, radian
+    #     """
+    #     S = np.zeros(6)
+    #     R = T[:3,:3]
+    #     p = T[:3,3]
+    #     trace = np.trace(R)
+    #     cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
+    #     theta_bd = np.acos(cos_theta)
+    #     if abs(theta_bd) < 1e-6:
+    #         theta_bd += np.random.normal(0,0.01) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
+    #     omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R-R.T))
+    #     omega_bd_hat_sq = omega_bd_hat**2
+    #     omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
+    #     v_bd = (np.eye(3)/theta_bd - 0.5*omega_bd_hat+(1/theta_bd-0.5/np.tan(0.5*theta_bd))*omega_bd_hat_sq) @ p
+    #     S[:3] = omega_bd
+    #     S[3:] = v_bd
+    #     T_bd = theta_bd * S
+    #     return T_bd, S, theta_bd
+    
+    def matlogm(self, T_bd):
         """
-        Compute the relative twist 
-        from the desired transformation matrix using matrix logarithm.
-        :param T_bd : Desired transformation matrix (4x4)
-        :return: 6D vector, radian
+        Compute the relative twist from the desired transformation matrix using matrix logarithm.
+        :param T_bd: 4x4 Transformation matrix
+        :return: (Twist * θ), Twist vector (6D), θ (radian)
         """
-        T = np.zeros(6)
-        R_bd = T_bd[:3,:3]
-        p = T_bd[:3,3]
+        S = np.zeros(6)
+        R_bd = T_bd[:3, :3]
+        p = T_bd[:3, 3]
         trace = np.trace(R_bd)
-        cos_theta = np.clip((trace-1)/2,-1.0,1.0) # 부동소수점으로 범위 초과하는거 방지
-        theta_bd = np.acos(cos_theta)
-        # if theta_bd < 1e-8:
-        theta_bd += np.random.normal(0,0.1) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
-        omega_bd_hat = (1 / (2 * np.sin(theta_bd)) * (R_bd-R_bd.T))
-        omega_bd_hat_sq = omega_bd_hat**2
-        omega_bd = [omega_bd_hat[2][1],omega_bd_hat[0][2],omega_bd_hat[1][0]]
-        v_bd = (np.eye(3)/theta_bd - 0.5*omega_bd_hat+(1/theta_bd-0.5/np.tan(0.5*theta_bd))*omega_bd_hat_sq) @ p
-        T[:3] = omega_bd
-        T[3:] = v_bd
-        T = theta_bd*T
-        return T
+        cos_theta = np.clip((trace - 1) / 2, -1.0, 1.0)
+        theta = np.acos(cos_theta)
+
+        epsilon = 1e-6
+        if np.abs(theta) < epsilon:
+        #     omega_hat = np.zeros((3, 3))
+        #     v = p / np.linalg.norm(p) if np.linalg.norm(p) > epsilon else np.zeros(3)
+        #     screw = np.concatenate([np.zeros(3), v])
+        #     return theta * screw, screw, theta
+            theta += np.random.normal(0,0.01) # theta_bd가 0이 되면 Nan 에러 발생, 가우시안 노이즈 추가
+
+        omega_hat = (1 / (2 * np.sin(theta))) * (R_bd - R_bd.T)
+        omega_hat_sq = omega_hat @ omega_hat
+        omega = np.array([
+            omega_hat[2,1],
+            omega_hat[0,2],
+            omega_hat[1,0]
+        ])
+        
+        A_inv = (
+            np.eye(3) / theta
+            - 0.5 * omega_hat
+            + (1 / theta - 0.5 / np.tan(theta / 2)) * omega_hat_sq
+        )
+        v = A_inv @ p
+        screw = np.concatenate([omega, v])
+        return theta * screw, screw, theta
     
     def CurrenntAngles(self, T_sb):
         """
@@ -245,76 +289,124 @@ def quintic_time_scaling(t, T):
     s_ddot = (6*a3*(t) + 12*a4*(t)**2 + 20*a5*(t)**3)
     return s, s_dot, s_ddot
 
-def IK(robot,init,desired):
-
+def IK(robot, init, desired):
+    """
+    Improved IK that avoids gimbal lock by comparing full SE(3) matrices.
+    :param robot: Robot class (joint list, screw axes, zero config)
+    :param init: initial joint angles (degree)
+    :param desired: desired pose (x, y, z, roll, pitch, yaw)
+    :return: solution joint angles (degree)
+    """
     se3 = SE3()
     M = robot.zero
     B = robot.B_tw
     S = robot.S_tw
     L = len(robot.joints)
 
-    T_d = se3.pose_to_SE3(desired)
-    threshold = 1e-6 # 오차 범위
+    T_d = se3.pose_to_SE3(desired)  # Desired SE(3)
+    threshold = 1e-4
     count = 0
-        
+
     while True:
+        count += 1
 
-        matexps_b = []
-        matexps_s = []
+        # Forward Kinematics
+        matexps_b = [se3.matexp(init[i], B[i], joint=robot.joints[i].type) for i in range(L)]
+        matexps_s = [se3.matexp(init[i], S[i], joint=robot.joints[i].type) for i in range(L)]
+        T_sb = se3.matFK(M, matexps_b)
 
-        count += 1 # 연산 횟수 증가
+        # Error Transformation
+        T_bd = np.linalg.inv(T_sb) @ T_d
+        V_bd, _, _ = se3.matlogm(T_bd)
 
-        for i in range(L):
-            matexps_b.append(se3.matexp(robot.joints[i].type,init[i],B[i])) # Body Axis 기준 각 축의 Matrix Exponential
-            matexps_s.append(se3.matexp(robot.joints[i].type,init[i],S[i])) # Space Axis 기준 각 축의 Matrix Exponential
+        # Jacobian
+        J_b = se3.body_jacobian(M, matexps_b, matexps_s, S)
+        J_pseudo = se3.j_inv(J_b)
 
-        T_sb = se3.matFK(M,matexps_b) # Forward Kinematics 적용 변환행렬
-        estimated = []
-        for i in range(3):
-            estimated.append(T_sb[i,3].item()) # 현재 x, y, z
-        
-        eulerAngles = se3.CurrenntAngles(T_sb)
-        for eulerAngle in eulerAngles:
-            estimated.append(eulerAngle) # Euler 각도 추정값
+        # Update joint angle (in rad)
+        theta = deg2rad(init, robot.joints)
+        thetak = theta.reshape(L, 1) + J_pseudo @ V_bd.reshape(6, 1)
+        thetak = rad2deg(thetak, robot.joints)
+        init = theta_normalize(thetak, robot.joints)
 
-        pos_err = np.array(desired[:3]) - np.array(estimated[:3]) # x, y, z 오차
-
-        T_bd = np.dot(np.linalg.inv(T_sb),T_d) # Relative Trasformation Matrix
-        J_b = se3.body_jacobian(M,matexps_b,matexps_s,S) # Body Jacobian
-        J_pseudo = se3.j_inv(J_b) # Jacobian의 역행렬 (또는 의사역행렬)
-        V_bd = se3.relativetwist(T_bd) # Ralative Twist, 각도 오차
-
-        theta = deg2rad(init,robot.joints)
-
-        thetak = theta.reshape(L,1) + J_pseudo @ V_bd.reshape(6,1) # Newton Raphson Method
-        thetak = rad2deg(thetak,robot.joints)
-
-        # 각도 정규화 후 갱신 (-180~180)
-        init = theta_normalize(thetak,robot.joints)
-        print(init)
-
-        if np.all(np.abs(pos_err) < threshold): # 오차가 임계값 이내면 break
-            print(estimated)
+        # Check error norm (position only or full twist)
+        pos_err = np.linalg.norm(T_d[:3, 3] - T_sb[:3, 3])
+        rot_err = np.linalg.norm(V_bd[:3])
+        if pos_err < threshold and rot_err < np.deg2rad(0.1):
             print(f"연산 횟수 : {count}, Joint Value : {init}")
             break
-        if count >= 1000:
+
+        if count >= 100:
+            print(f"연산 종료 (Max iter). Joint Value : {init}")
             break
 
     return init
 
-def create_trajectory(start, end, times=1.0, samples=50):
+def interpolate_SE3_quat(T0, Td, T, N):
+    pos0 = T0[:3, 3]
+    posd = Td[:3, 3]
 
+    key_times = [0, 1]
+    key_rots = R.from_matrix([T0[:3, :3], Td[:3, :3]])
+    slerp = Slerp(key_times, key_rots)
+
+    trajectory = []
+    for i in range(N):
+        t = i / (N - 1) * T
+        s, _, _ = quintic_time_scaling(t, T)
+        interp_rot = slerp([s])[0]  # s in [0,1]
+        interp_pos = (1 - s) * pos0 + s * posd
+
+        T_interp = np.eye(4)
+        T_interp[:3, :3] = interp_rot.as_matrix()
+        T_interp[:3, 3] = interp_pos
+        trajectory.append(T_interp)
+
+    return trajectory
+
+
+def task_trajectory(start, end, times=1.0, samples=100):
+    
+    se3=SE3()
     theta_start = np.array(start)
     theta_end = np.array(end)
+
+    Td = se3.pose_to_SE3(theta_end)
+    print(Td)
+    T0 = se3.pose_to_SE3(theta_start)
+    print(T0)
+
+    return interpolate_SE3_quat(T0, Td, times, samples)
+    # _,screw,theta= se3.matlogm(np.linalg.inv(T_0) @ T_d)
+
+    # T = times
+    # N = samples
+
+    # trajectory = []
+
+    # for i in range(N):
+    #     t = i / N * T
+    #     s, _, _= quintic_time_scaling(t, T)
+    #     T_s = T_0 @ se3.matexp(theta*s,screw*s,unit='radian')
+    #     trajectory.append(T_s)
+    
+    # return trajectory#, T_d
+
+
+def joint_trajectory(start, end, times=1.0, samples=100):
+    theta_start = np.array(start)
+    theta_end = np.array(end)
+    
+    # 180도 초과하는 각도에 대해 반대 방향으로 회전하도록 수정
+    for i in range(len(theta_end)):
+        if np.abs(theta_end[i]) > 180:
+            if theta_end[i] > 0:
+                theta_end[i] = theta_end[i] - 360
+            else:
+                theta_end[i] = theta_end[i] + 360
+    
     d_theta = theta_end - theta_start
 
-    for i in range(len(start)):
-        if np.abs(d_theta[i]) > 180:
-            d_theta[i] = -np.sign(d_theta[i])*(360-np.abs(d_theta[i]))
-    # for i in range(len(start)):
-    #     if np.abs(d_theta[i]+theta_start[i]) > 180:
-    #         d_theta[i] = -np.sign(d_theta[i])*(360-np.abs(d_theta[i]))
-        
     T = times
     N = samples
 
@@ -325,11 +417,71 @@ def create_trajectory(start, end, times=1.0, samples=50):
     for i in range(N):
         t = i / N * T
         s, s_dot, s_ddot = quintic_time_scaling(t, T)
-        theta_desired = theta_start + s*(d_theta)
+        theta_desired = theta_start + s*d_theta
         theta_dot = s_dot*(d_theta)
         theta_ddot = s_ddot*(d_theta)
         trajectory.append(theta_desired)
         velocity.append(theta_dot)
         acceleration.append(theta_ddot)
     
-    return d_theta, trajectory, velocity, acceleration
+    return trajectory
+
+# def IK(robot,init,desired):
+
+#     se3 = SE3()
+#     M = robot.zero
+#     B = robot.B_tw
+#     S = robot.S_tw
+#     L = len(robot.joints)
+
+#     T_d = se3.pose_to_SE3(desired)
+#     threshold = 1e-6 # 오차 범위
+#     count = 0
+        
+#     while True:
+
+#         matexps_b = []
+#         matexps_s = []
+
+#         count += 1 # 연산 횟수 증가
+
+#         # Forward Kinematics
+#         matexps_b = [se3.matexp(init[i], B[i], joint=robot.joints[i].type) for i in range(L)]
+#         matexps_s = [se3.matexp(init[i], S[i], joint=robot.joints[i].type) for i in range(L)]
+#         T_sb = se3.matFK(M, matexps_b)
+
+#         T_sb = se3.matFK(M,matexps_b) # Forward Kinematics 적용 변환행렬
+#         estimated = []
+#         for i in range(3):
+#             estimated.append(T_sb[i,3].item()) # 현재 x, y, z
+        
+#         eulerAngles = se3.CurrenntAngles(T_sb)
+#         for eulerAngle in eulerAngles:
+#             estimated.append(eulerAngle) # Euler 각도 추정값
+
+#         pos_err = np.array(desired[:3]) - np.array(estimated[:3]) # x, y, z 오차
+
+#         T_bd = np.dot(np.linalg.inv(T_sb),T_d) # Relative Trasformation Matrix
+#         J_b = se3.body_jacobian(M,matexps_b,matexps_s,S) # Body Jacobian
+#         J_pseudo = se3.j_inv(J_b) # Jacobian의 역행렬 (또는 의사역행렬)
+#         V_bd,_,_ = se3.matlogm(T_bd) # Ralative Twist, 각도 오차
+
+#         theta = deg2rad(init,robot.joints)
+
+#         thetak = theta.reshape(L,1) + J_pseudo @ V_bd.reshape(6,1) # Newton Raphson Method
+#         thetak = rad2deg(thetak,robot.joints)
+
+#         # 각도 정규화 후 갱신 (-180~180)
+#         init = theta_normalize(thetak,robot.joints)
+#         # print(init)
+
+#         if np.all(np.abs(pos_err) < threshold): # 오차가 임계값 이내면 break
+#             print(estimated)
+#             print(f"연산 횟수 : {count}, Joint Value : {init}")
+#             break
+#         if count >= 100:
+#             print(estimated)
+#             print(f"연산 횟수 : {count}, Joint Value : {init}")
+#             break
+
+#     return init

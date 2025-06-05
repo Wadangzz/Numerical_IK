@@ -18,7 +18,7 @@ end = math.IK(wam,init,desired)
 start = np.array(init)
 end = np.array(end)
 
-d_theta, trajectory, _, _ = math.create_trajectory(start,end,times=1.0)
+d_theta, trajectory, _, _ = math.joint_trajectory(start,end,times=1.0)
 
 visual.plot_trajectory(start,d_theta,L)
 visual.animate_robot(wam, trajectory, lim = 80)
